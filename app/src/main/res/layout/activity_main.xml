@@ -13,12 +13,14 @@
         android:id="@+id/orig_img"
         android:layout_width="0dp"
         android:layout_height="match_parent"
+        android:contentDescription="@string/before_blur"
         android:layout_weight="1"/>
 
     <ImageView
         android:id="@+id/blur_img"
         android:layout_width="0dp"
         android:layout_height="match_parent"
+        android:contentDescription="@string/after_blur"
         android:layout_weight="1"/>
 
 </LinearLayout>

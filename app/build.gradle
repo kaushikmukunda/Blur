@@ -16,6 +16,7 @@ model {
 
     android.ndk {
         moduleName = "native"
+        ldLibs = ["log", "jnigraphics"]
     }
 
     android.buildTypes {

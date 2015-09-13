@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Blur</string>
-
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
+    <string name="before_blur">beforeBlur</string>
+    <string name="after_blur">afterBlur</string>
 </resources>
