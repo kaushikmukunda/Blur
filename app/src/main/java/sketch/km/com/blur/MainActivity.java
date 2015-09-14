@@ -33,7 +33,7 @@ public class MainActivity extends Activity {
             // Wait until screen orients to landscape
             if (mOrigImg.getWidth() > mOrigImg.getHeight()) {
                 // Instead of processing the entire bitmap, scale it to the size we need and then process it
-                Bitmap fullsizeSrc = BitmapFactory.decodeResource(getResources(), R.drawable.forest);
+                Bitmap fullsizeSrc = BitmapFactory.decodeResource(getResources(), R.drawable.ocean);
                 Bitmap scaledSrc = Bitmap.createScaledBitmap(fullsizeSrc, mOrigImg.getWidth(), mOrigImg.getHeight(), false);
 
                 // Destination Buffer
