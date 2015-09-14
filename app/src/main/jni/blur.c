@@ -11,10 +11,6 @@
 #define RED(x)    (((x) & REDMASK))
 #define GREEN(x)  ((x) & GREENMASK)
 #define BLUE(x)   ((x) & BLUEMASK)
-#define ALPHA(x)  ((x) & ALPHAMASK)
-
-#define UNDERFLOW_PROTECTED_SUB(x, y) ((y) > (x)) ? 0 : x-y;
-#define OVERFLOW_PROTECTED_ADD(x, y) (((x) + (y)) < x) ? x : x+y;
 
 JNIEXPORT jstring JNICALL
 Java_sketch_km_com_blur_NativeBlur_loadFromJni(JNIEnv *env, jobject instance) {
@@ -52,7 +48,6 @@ Java_sketch_km_com_blur_NativeBlur_blurImage(JNIEnv *env, jclass type, jobject s
     sprintf(opbuffer, "row=%d col=%d", info.width, info.height);
     LogE(TAG, opbuffer);
 
-    //pixelateBlur((int *) srcPixels, (int *) dstPixels, info.width, info.height);
     boxBlur((uint32_t*) srcPixels, (uint32_t*) dstPixels, info.width, info.height);
 
     AndroidBitmap_unlockPixels(env, src);
@@ -61,15 +56,15 @@ Java_sketch_km_com_blur_NativeBlur_blurImage(JNIEnv *env, jclass type, jobject s
 
 void boxBlur(uint32_t* srcPixels, uint32_t* dstPixels, uint32_t col, uint32_t row) {
     horizontalBlur(srcPixels, dstPixels, col, row);
+    verticalBlur(dstPixels, col, row);
 }
 
 void horizontalBlur(uint32_t* srcPixels, uint32_t* dstPixels, uint32_t col, uint32_t row) {
     uint32_t i,j;
     uint32_t offset;
     uint32_t rAccum, gAccum, bAccum;
-    uint8_t halfSize = 20;
+    uint8_t halfSize = 30;
     uint8_t currSize = 0;
-    char opbuffer[100];
 
     for (i=0; i<row; i++) {
         rAccum = 0;
@@ -84,8 +79,6 @@ void horizontalBlur(uint32_t* srcPixels, uint32_t* dstPixels, uint32_t col, uint
             gAccum += GREEN(srcPixels[offset+j]);
             bAccum += BLUE(srcPixels[offset+j]);
             currSize++;
-            sprintf(opbuffer, "r=%x g=%x b=%x", rAccum, gAccum, bAccum);
-//            LogE("pre", opbuffer);
         }
 
         for (j=0; j<col; j++) {
@@ -94,27 +87,73 @@ void horizontalBlur(uint32_t* srcPixels, uint32_t* dstPixels, uint32_t col, uint
                     ((gAccum/currSize) & GREENMASK) |
                     ((bAccum/currSize) & BLUEMASK);
 
-            sprintf(opbuffer, "pre=%x post=%x r=%x g=%x b=%x", srcPixels[offset+j], dstPixels[offset+j],
-            rAccum/currSize, gAccum/currSize, bAccum/currSize);
-//            LogE("add", opbuffer);
-
             // move Window
-            if ((j+halfSize+1) < col) {
-                uint32_t pos = offset + j + halfSize + 1;
-                rAccum = OVERFLOW_PROTECTED_ADD(rAccum, RED(srcPixels[pos]));
-                gAccum = OVERFLOW_PROTECTED_ADD(gAccum, GREEN(srcPixels[pos]));
-                bAccum = OVERFLOW_PROTECTED_ADD(bAccum, BLUE(srcPixels[pos]));
-                currSize++;
-            }
-
             if (j>=halfSize-1) {
                 uint32_t pos = offset + j - halfSize - 1;
 
-                rAccum = UNDERFLOW_PROTECTED_SUB(rAccum, RED(srcPixels[pos]));
-                gAccum = UNDERFLOW_PROTECTED_SUB(gAccum, GREEN(srcPixels[pos]));
-                bAccum = UNDERFLOW_PROTECTED_SUB(bAccum, BLUE(srcPixels[pos]));
+                rAccum -= RED(srcPixels[pos]);
+                gAccum -= GREEN(srcPixels[pos]);
+                bAccum -= BLUE(srcPixels[pos]);
                 currSize--;
             }
+
+            if ((j+halfSize+1) < col) {
+                uint32_t pos = offset + j + halfSize + 1;
+                rAccum += RED(srcPixels[pos]);
+                gAccum += GREEN(srcPixels[pos]);
+                bAccum += BLUE(srcPixels[pos]);
+                currSize++;
+            }
+        }
+    }
+}
+
+void verticalBlur(uint32_t* dstPixels, uint32_t col, uint32_t row) {
+    uint32_t i,j;
+    uint32_t rAccum, gAccum, bAccum;
+    uint8_t halfSize = 10;
+    uint8_t currSize = 0;
+
+    for (i=0; i<col; i++) {
+        rAccum = 0;
+        gAccum = 0;
+        bAccum = 0;
+        currSize = 1;
+
+        // Compute window
+        for (j=0; j<halfSize; j++) {
+            uint32_t pos = i + j*col;
+            rAccum += RED(dstPixels[pos]);
+            gAccum += GREEN(dstPixels[pos]);
+            bAccum += BLUE(dstPixels[pos]);
+            currSize++;
+        }
+
+        for (j=0; j<row; j++) {
+            uint32_t pos = j*col + i;
+            dstPixels[pos] = (dstPixels[pos] & (ALPHAMASK)) |
+                    ((rAccum/currSize) & REDMASK) |
+                    ((gAccum/currSize) & GREENMASK) |
+                    ((bAccum/currSize) & BLUEMASK);
+
+            // move Window
+            if (j>=halfSize+1) {
+                uint32_t tpos = pos - col * (halfSize + 1);
+
+                rAccum -= RED(dstPixels[tpos]);
+                gAccum -= GREEN(dstPixels[tpos]);
+                bAccum -= BLUE(dstPixels[tpos]);
+                currSize--;
+            }
+
+            if ((j+halfSize+1) < row) {
+                uint32_t tpos = pos + col * (halfSize + 1);
+                rAccum += RED(dstPixels[tpos]);
+                gAccum += GREEN(dstPixels[tpos]);
+                bAccum += BLUE(dstPixels[tpos]);
+                currSize++;
+            }
+
         }
     }
 }
